@@ -1,11 +1,13 @@
 package ru.netology.repository;
 
 import org.springframework.stereotype.Repository;
+import ru.netology.exception.NotFoundException;
 import ru.netology.model.Post;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 // Stub
 @Repository
@@ -15,11 +17,23 @@ public class PostRepository {
     private final AtomicLong counter = new AtomicLong();
 
     public List<Post> all() {
-        return new ArrayList<>(data.values());
+        return data.values().stream()
+                .filter(post -> !post.isRemoved())
+                .collect(Collectors.toList());
     }
 
     public Optional<Post> getById(long id) {
-        return Optional.ofNullable(data.get(id));
+        Post post = data.get(id);
+
+        if (post == null) {
+            throw new NotFoundException("Post does not exist");
+        }
+
+        if (post.isRemoved()) {
+            throw new NotFoundException("Post has been deleted");
+        }
+
+        return Optional.of(post);
     }
 
     public Post save(Post post) {
@@ -37,6 +51,14 @@ public class PostRepository {
     }
 
     public void removeById(long id) {
-        data.remove(id);
+        Post post = data.get(id);
+
+        if (post == null) {
+            throw new NotFoundException("Post does not exist");
+        }
+
+        if(!post.isRemoved()) {
+            post.setRemoved(true);
+        }
     }
 }
